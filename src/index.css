@@ -1,0 +1,170 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-aura-bg text-aura-text font-sans antialiased;
+    @apply dark:bg-aura-dark-bg dark:text-aura-dark-text;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+
+  ::selection {
+    @apply bg-aura-green text-aura-text;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-aura-accent rounded;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 bg-aura-text text-white text-sm font-medium rounded-lg hover:bg-aura-accent transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-aura-accent focus-visible:ring-offset-2;
+    @apply dark:bg-aura-dark-text dark:text-aura-dark-bg;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 bg-aura-surface text-aura-text text-sm font-medium rounded-lg border border-aura-border hover:bg-aura-surface2 transition-colors duration-200;
+    @apply dark:bg-aura-dark-surface dark:text-aura-dark-text dark:border-aura-dark-border dark:hover:bg-aura-dark-surface2;
+  }
+
+  .btn-accent {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 bg-aura-accent text-white text-sm font-medium rounded-lg hover:bg-aura-accent-light transition-colors duration-200;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2 text-aura-muted text-sm font-medium rounded-lg hover:bg-aura-surface2 hover:text-aura-text transition-colors duration-200;
+    @apply dark:text-aura-dark-muted dark:hover:bg-aura-dark-surface2 dark:hover:text-aura-dark-text;
+  }
+
+  .card {
+    @apply bg-aura-surface rounded-card shadow-card border border-aura-border;
+    @apply dark:bg-aura-dark-surface dark:border-aura-dark-border;
+  }
+
+  .card-hover {
+    @apply card hover:shadow-card-hover transition-shadow duration-200;
+  }
+
+  .section-heading {
+    @apply text-display-sm font-serif text-aura-text dark:text-aura-dark-text;
+  }
+
+  .section-subheading {
+    @apply text-aura-muted text-base mt-2 dark:text-aura-dark-muted;
+  }
+
+  .label-tag {
+    @apply text-xs font-medium tracking-widest uppercase text-aura-accent dark:text-aura-accent-light;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2.5 bg-aura-surface border border-aura-border rounded-lg text-sm text-aura-text placeholder:text-aura-muted focus:outline-none focus:ring-2 focus:ring-aura-accent/30 focus:border-aura-accent transition-colors duration-200;
+    @apply dark:bg-aura-dark-surface dark:border-aura-dark-border dark:text-aura-dark-text dark:placeholder:text-aura-dark-muted;
+  }
+
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in;
+  }
+
+  .modal-panel {
+    @apply bg-aura-surface w-full sm:max-w-lg max-h-[92vh] overflow-y-auto rounded-t-modal sm:rounded-modal shadow-modal animate-slide-up;
+    @apply dark:bg-aura-dark-surface;
+  }
+
+  .tab-btn {
+    @apply px-4 py-2 text-sm font-medium rounded-full whitespace-nowrap transition-colors duration-200;
+  }
+
+  .tab-btn-active {
+    @apply tab-btn bg-aura-text text-white dark:bg-aura-dark-text dark:text-aura-dark-bg;
+  }
+
+  .tab-btn-inactive {
+    @apply tab-btn text-aura-muted hover:text-aura-text hover:bg-aura-surface2 dark:text-aura-dark-muted dark:hover:text-aura-dark-text dark:hover:bg-aura-dark-surface2;
+  }
+
+  .service-row {
+    @apply flex items-center gap-4 py-4 border-b border-aura-border last:border-0 hover:bg-aura-surface2/50 px-2 rounded-lg -mx-2 transition-colors duration-150 cursor-pointer;
+    @apply dark:border-aura-dark-border dark:hover:bg-aura-dark-surface2/50;
+  }
+
+  .skeleton {
+    @apply bg-aura-border animate-pulse rounded;
+    @apply dark:bg-aura-dark-border;
+  }
+
+  .nav-link {
+    @apply text-sm text-aura-muted hover:text-aura-text transition-colors duration-200 font-medium;
+    @apply dark:text-aura-dark-muted dark:hover:text-aura-dark-text;
+  }
+
+  .nav-link-active {
+    @apply text-sm text-aura-text font-medium;
+    @apply dark:text-aura-dark-text;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-green {
+    @apply badge bg-aura-green text-green-800 dark:bg-green-900/30 dark:text-green-300;
+  }
+
+  .badge-amber {
+    @apply badge bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300;
+  }
+
+  .badge-red {
+    @apply badge bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300;
+  }
+
+  .badge-blue {
+    @apply badge bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300;
+  }
+
+  .progress-step {
+    @apply w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .content-safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 5rem);
+  }
+}
