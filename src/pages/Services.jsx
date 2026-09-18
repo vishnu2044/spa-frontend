@@ -77,6 +77,7 @@ export default function ServicesPage() {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState('All');
   const [search, setSearch] = useState('');
+  const [selectedService, setSelectedService] = useState(null);
   const [servicesData, setServicesData] = useState([]);
   const [serviceCategories, setServiceCategories] = useState(['All']);
   const [loading, setLoading] = useState(true);
@@ -213,7 +214,7 @@ export default function ServicesPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold text-aura-text dark:text-aura-dark-text">{service.name}</p>
-                    {service.popular && (
+                    {(service.popular || service.is_popular) && (
                       <span className="badge badge-amber text-[10px]">Popular</span>
                     )}
                   </div>
@@ -222,7 +223,7 @@ export default function ServicesPage() {
                   </p>
                   <div className="flex items-center gap-1.5 mt-1">
                     <Clock size={11} className="text-aura-muted dark:text-aura-dark-muted" />
-                    <span className="text-xs text-aura-muted dark:text-aura-dark-muted">{formatDuration(service.duration)}</span>
+                    <span className="text-xs text-aura-muted dark:text-aura-dark-muted">{formatDuration(service.duration_minutes || service.duration)}</span>
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0 space-y-1">
