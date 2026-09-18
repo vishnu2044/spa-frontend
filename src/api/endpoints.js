@@ -145,6 +145,48 @@ export const toggleAdminServiceStatus = async (id, status) => {
   return data;
 };
 
+// Admin Reviews
+export const fetchAdminReviews = async () => {
+  const { data } = await apiClient.get('/admin/reviews');
+  return data;
+};
+
+export const toggleAdminReviewVisibility = async (id, visibility) => {
+  const { data } = await apiClient.patch(`/admin/reviews/${id}/visibility`, { status: visibility });
+  return data;
+};
+
+export const deleteAdminReview = async (id) => {
+  const { data } = await apiClient.delete(`/admin/reviews/${id}`);
+  return data;
+};
+
+// Admin Offers
+export const fetchAdminOffers = async () => {
+  const { data } = await apiClient.get('/offers'); // Assuming same as public for now, or /admin/offers if separate
+  return data;
+};
+
+export const createAdminOffer = async (offerData) => {
+  const { data } = await apiClient.post('/admin/offers', offerData);
+  return data;
+};
+
+export const updateAdminOffer = async (id, offerData) => {
+  const { data } = await apiClient.put(`/admin/offers/${id}`, offerData);
+  return data;
+};
+
+export const toggleAdminOfferStatus = async (id, status) => {
+  const { data } = await apiClient.patch(`/admin/offers/${id}/status`, { status });
+  return data;
+};
+
+export const deleteAdminOffer = async (id) => {
+  const { data } = await apiClient.delete(`/admin/offers/${id}`);
+  return data;
+};
+
 // Auth
 export const loginUser = async (credentials) => {
   const { data } = await apiClient.post('/auth/login', credentials);

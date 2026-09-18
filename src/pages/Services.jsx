@@ -4,6 +4,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { Search, X, Clock, ChevronRight, Check } from 'lucide-react';
 import { fetchServices } from '../api/endpoints';
 import { formatPrice, formatDuration } from '../utils/helpers';
+import { getServiceImageUrl } from '../utils/imageUtils';
 import Tabs from '../components/ui/Tabs';
 import Modal from '../components/ui/Modal';
 import StarRating from '../components/ui/StarRating';
@@ -15,7 +16,7 @@ function ServiceModal({ service, onClose, onBook }) {
     <Modal isOpen={!!service} onClose={onClose} title={service.name} size="md">
       <div className="p-5 space-y-5">
         <img
-          src={service.image || service.image_url}
+          src={getServiceImageUrl(service.name, service.image || service.image_url)}
           alt={service.name}
           className="w-full h-48 object-cover rounded-xl"
         />
@@ -206,7 +207,7 @@ export default function ServicesPage() {
                 onKeyDown={(e) => e.key === 'Enter' && setSelectedService(service)}
               >
                 <img
-                  src={service.image || service.image_url}
+                  src={getServiceImageUrl(service.name, service.image || service.image_url)}
                   alt={service.name}
                   className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
                   loading="lazy"

@@ -1,8 +1,8 @@
 // src/pages/Packages.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Clock, Percent, ShoppingBag } from 'lucide-react';
-import { packages, buildableServices } from '../data/packages';
+import { fetchPackages, fetchServices } from '../api/endpoints';
 import { formatPrice, formatDuration } from '../utils/helpers';
 import Modal from '../components/ui/Modal';
 
@@ -55,7 +55,7 @@ function PackageModal({ pkg, onClose, onBook }) {
   );
 }
 
-function PackageBuilder() {
+function PackageBuilder({ services = [] }) {
   const navigate = useNavigate();
   const [selected, setSelected] = useState(new Set());
 
@@ -66,7 +66,7 @@ function PackageBuilder() {
     setSelected(next);
   };
 
-  const chosenServices = buildableServices.filter((s) => selected.has(s.id));
+  const chosenServices = services.filter((s) => selected.has(s.id));
   const total = chosenServices.reduce((acc, s) => acc + s.price, 0);
   const duration = chosenServices.reduce((acc, s) => acc + s.duration, 0);
 
@@ -79,7 +79,7 @@ function PackageBuilder() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-6">
-        {buildableServices.map((svc) => {
+        {services.map((svc) => {
           const isSelected = selected.has(svc.id);
           return (
             <button
@@ -144,6 +144,27 @@ function PackageBuilder() {
 export default function PackagesPage() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState(null);
+  const [packages, setPackages] = useState([]);
+  const [buildableServices, setBuildableServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [pkgs, svcs] = await Promise.all([
+          fetchPackages(),
+          fetchServices()
+        ]);
+        setPackages(pkgs || []);
+        setBuildableServices((svcs || []).filter(s => s.price < 2000).slice(0, 6)); // Just take some services for builder
+      } catch (err) {
+        console.error('Failed to load packages', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   const handleBook = (pkg) => {
     navigate('/booking');
@@ -173,8 +194,8 @@ export default function PackagesPage() {
               <p className="text-xs text-aura-muted dark:text-aura-dark-muted mb-4">{pkg.tagline}</p>
 
               <ul className="space-y-1.5 flex-1 mb-4">
-                {pkg.services.map((s) => (
-                  <li key={s} className="flex items-center gap-2 text-sm text-aura-muted dark:text-aura-dark-muted">
+                {(pkg.services || pkg.included_services || []).map((s) => (
+                  <li key={s?.id || s} className="flex items-center gap-2 text-sm text-aura-muted dark:text-aura-dark-muted">
                     <Check size={13} className="text-green-500 flex-shrink-0" />
                     {s}
                   </li>
@@ -203,7 +224,7 @@ export default function PackagesPage() {
           ))}
         </div>
 
-        <PackageBuilder />
+        <PackageBuilder services={buildableServices} />
       </div>
 
       <PackageModal pkg={selected} onClose={() => setSelected(null)} onBook={handleBook} />

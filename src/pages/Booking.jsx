@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Check, Clock, Star, Calendar, User } from 'lucide-react';
 import { fetchServices, fetchStaff, createBooking } from '../api/endpoints';
-import { getAvatarUrl } from '../utils/imageUtils';
+import { getAvatarUrl, getServiceImageUrl } from '../utils/imageUtils';
 import { formatPrice, formatDuration, formatDate, formatTime, getAvailableSlots, getCalendarAvailability } from '../utils/helpers';
 import { saveBooking, addPoints, generateBookingId } from '../utils/storage';
 
@@ -42,7 +42,7 @@ function StepService({ value, onChange, services, serviceCategories }) {
                 : 'border-aura-border dark:border-aura-dark-border hover:border-aura-accent/40'
             }`}
           >
-            <img src={svc.image || svc.image_url} alt={svc.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+            <img src={getServiceImageUrl(svc.name, svc.image || svc.image_url)} alt={svc.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-aura-text dark:text-aura-dark-text">{svc.name}</p>
               <p className="text-xs text-aura-muted dark:text-aura-dark-muted">{formatDuration(svc.duration_minutes || svc.duration)}</p>
@@ -434,7 +434,7 @@ function BookingSuccess({ bookingId, booking, onViewBookings, onBookAgain }) {
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <img src={booking.service?.image || booking.service?.image_url} alt={booking.service?.name} className="w-10 h-10 rounded-lg object-cover" />
+          <img src={getServiceImageUrl(booking.service?.name, booking.service?.image || booking.service?.image_url)} alt={booking.service?.name} className="w-10 h-10 rounded-lg object-cover" />
           <div>
             <p className="font-semibold text-sm text-aura-text dark:text-aura-dark-text">{booking.service?.name}</p>
             <p className="text-xs text-aura-muted dark:text-aura-dark-muted">{formatDate(booking.date)} · {formatTime(booking.time)}</p>

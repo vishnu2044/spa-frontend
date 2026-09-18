@@ -7,7 +7,7 @@ import TrustStrip from '../components/home/TrustStrip';
 import QuickBookBar from '../components/home/QuickBookBar';
 import { useState, useEffect } from 'react';
 import { fetchServices, fetchStaff, fetchReviews } from '../api/endpoints';
-import { getAvatarUrl } from '../utils/imageUtils';
+import { getAvatarUrl, getServiceImageUrl } from '../utils/imageUtils';
 import { formatPrice, formatDuration } from '../utils/helpers';
 import StarRating from '../components/ui/StarRating';
 import { SkeletonRow } from '../components/ui/Skeleton';
@@ -76,7 +76,7 @@ export default function Home() {
                 onKeyDown={(e) => e.key === 'Enter' && navigate('/services', { state: { openService: service.id } })}
               >
                 <img
-                  src={service.image || service.image_url}
+                  src={getServiceImageUrl(service.name, service.image || service.image_url)}
                   alt={service.name}
                   className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
                   loading="lazy"

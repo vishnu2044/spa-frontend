@@ -1,22 +1,56 @@
-// src/pages/admin/AdminReviews.jsx
 import { useState, useEffect } from 'react';
 import { Check, EyeOff, Trash2 } from 'lucide-react';
-import { reviews as seedReviews } from '../../data/reviews';
-import { getReviews } from '../../utils/storage';
+import { fetchAdminReviews, toggleAdminReviewVisibility, deleteAdminReview } from '../../api/endpoints';
+import { getAvatarUrl } from '../../utils/imageUtils';
 import StarRating from '../../components/ui/StarRating';
 import { formatDate } from '../../utils/helpers';
 
 export default function AdminReviews() {
   const [reviews, setReviews] = useState([]);
   const [hidden, setHidden] = useState(new Set());
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userReviews = getReviews();
-    setReviews([...userReviews, ...seedReviews]);
+    const loadReviews = async () => {
+      try {
+        const data = await fetchAdminReviews();
+        setReviews(data || []);
+        
+        const hiddenSet = new Set();
+        (data || []).forEach(r => {
+          if (r.status === 'hidden' || r.visibility === 'hidden') hiddenSet.add(r.id);
+        });
+        setHidden(hiddenSet);
+      } catch (err) {
+        console.error('Failed to load admin reviews', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadReviews();
   }, []);
 
-  const handleHide = (id) => setHidden((h) => { const n = new Set(h); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const handleDelete = (id) => { if (window.confirm('Delete this review?')) setReviews((r) => r.filter((rv) => rv.id !== id)); };
+  const handleHide = async (id) => {
+    const isHidden = hidden.has(id);
+    const newStatus = isHidden ? 'published' : 'hidden';
+    try {
+      await toggleAdminReviewVisibility(id, newStatus);
+      setHidden((h) => { const n = new Set(h); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    } catch (err) {
+      console.error('Failed to toggle review visibility', err);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Delete this review?')) {
+      try {
+        await deleteAdminReview(id);
+        setReviews((r) => r.filter((rv) => rv.id !== id));
+      } catch (err) {
+        console.error('Failed to delete review', err);
+      }
+    }
+  };
 
   const visible = reviews.filter((r) => !hidden.has(r.id));
   const hiddenCount = hidden.size;
@@ -39,8 +73,8 @@ export default function AdminReviews() {
             <div key={review.id} className={`card p-4 transition-opacity ${isHidden ? 'opacity-40' : ''}`}>
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-aura-green dark:bg-aura-dark-border flex items-center justify-center text-sm font-semibold text-aura-accent">
-                    {review.avatar || review.name[0]}
+                  <div className="w-8 h-8 rounded-full bg-aura-green dark:bg-aura-dark-border flex items-center justify-center text-sm font-semibold text-aura-accent overflow-hidden">
+                    <img src={getAvatarUrl(review.name, review.avatar || review.image_url)} alt={review.name} className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-aura-text dark:text-aura-dark-text">{review.name}</p>

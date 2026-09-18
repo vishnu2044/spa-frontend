@@ -1,7 +1,7 @@
 // src/pages/admin/AdminOffers.jsx
 import { useState } from 'react';
 import { Plus, Edit2, Trash2, X, Check } from 'lucide-react';
-import { offers as defaultOffers } from '../../data/offers';
+import { fetchAdminOffers, createAdminOffer, updateAdminOffer, deleteAdminOffer, toggleAdminOfferStatus } from '../../api/endpoints';
 
 const EMPTY = { title: '', discount: '', category: 'All', code: '', description: '', status: 'active' };
 
@@ -41,28 +41,68 @@ function OfferForm({ value, onChange, onSave, onCancel }) {
 }
 
 export default function AdminOffers() {
-  const [offers, setOffers] = useState(defaultOffers.map((o) => ({ ...o, status: 'active' })));
+  const [offers, setOffers] = useState([]);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
   const [newOffer, setNewOffer] = useState(EMPTY);
+  const [loading, setLoading] = useState(true);
 
-  const handleAdd = () => {
-    setOffers((prev) => [...prev, { ...newOffer, id: `offer-${Date.now()}`, color: 'green' }]);
-    setNewOffer(EMPTY);
-    setAdding(false);
+  useEffect(() => {
+    const loadOffers = async () => {
+      try {
+        const data = await fetchAdminOffers();
+        setOffers(data || []);
+      } catch (err) {
+        console.error('Failed to load offers', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadOffers();
+  }, []);
+
+  const handleAdd = async () => {
+    try {
+      const added = await createAdminOffer({ ...newOffer, color: 'green' });
+      setOffers((prev) => [...prev, added]);
+      setNewOffer(EMPTY);
+      setAdding(false);
+    } catch (err) {
+      console.error('Failed to add offer', err);
+    }
   };
 
-  const handleEdit = () => {
-    setOffers((prev) => prev.map((o) => o.id === editing.id ? editing : o));
-    setEditing(null);
+  const handleEdit = async () => {
+    try {
+      const updated = await updateAdminOffer(editing.id, editing);
+      setOffers((prev) => prev.map((o) => o.id === editing.id ? updated : o));
+      setEditing(null);
+    } catch (err) {
+      console.error('Failed to update offer', err);
+    }
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm('Delete this offer?')) setOffers((prev) => prev.filter((o) => o.id !== id));
+  const handleDelete = async (id) => {
+    if (window.confirm('Delete this offer?')) {
+      try {
+        await deleteAdminOffer(id);
+        setOffers((prev) => prev.filter((o) => o.id !== id));
+      } catch (err) {
+        console.error('Failed to delete offer', err);
+      }
+    }
   };
 
-  const toggleStatus = (id) => {
-    setOffers((prev) => prev.map((o) => o.id === id ? { ...o, status: o.status === 'active' ? 'inactive' : 'active' } : o));
+  const toggleStatus = async (id) => {
+    const offer = offers.find(o => o.id === id);
+    if (!offer) return;
+    const newStatus = offer.status === 'active' ? 'inactive' : 'active';
+    try {
+      await toggleAdminOfferStatus(id, newStatus);
+      setOffers((prev) => prev.map((o) => o.id === id ? { ...o, status: newStatus } : o));
+    } catch (err) {
+      console.error('Failed to toggle offer status', err);
+    }
   };
 
   return (

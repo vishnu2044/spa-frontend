@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, X, Check } from 'lucide-react';
 import { fetchServices, createAdminService, updateAdminService, deleteAdminService, toggleAdminServiceStatus } from '../../api/endpoints';
 import { formatPrice, formatDuration } from '../../utils/helpers';
+import { getServiceImageUrl } from '../../utils/imageUtils';
 import Modal from '../../components/ui/Modal';
 
 const EMPTY = { name: '', category: 'Hair', duration: 60, price: 500, description: '' };
@@ -148,15 +149,15 @@ export default function AdminServices() {
               </div>
             ) : (
               <div className="card p-4 flex items-center gap-3">
-                <img src={svc.image} alt={svc.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                <img src={getServiceImageUrl(svc.name, svc.image || svc.image_url)} alt={svc.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className={`text-sm font-medium ${isActive(svc.id) ? 'text-aura-text dark:text-aura-dark-text' : 'text-aura-border dark:text-aura-dark-border line-through'}`}>
                       {svc.name}
                     </p>
-                    <span className="badge badge-green text-[10px]">{svc.category}</span>
+                    <span className="badge badge-green text-[10px]">{svc.category?.name || svc.category}</span>
                   </div>
-                  <p className="text-xs text-aura-muted dark:text-aura-dark-muted">{formatDuration(svc.duration)} · {formatPrice(svc.price)}</p>
+                  <p className="text-xs text-aura-muted dark:text-aura-dark-muted">{formatDuration(svc.duration_minutes || svc.duration)} · {formatPrice(svc.price)}</p>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button onClick={() => toggleActive(svc.id)} className="p-1.5 text-aura-muted dark:text-aura-dark-muted hover:text-aura-accent" title="Toggle active">
