@@ -1,6 +1,8 @@
 // src/App.jsx
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import BottomBar from './components/layout/BottomBar';
@@ -28,6 +30,7 @@ import AdminServices from './pages/admin/AdminServices';
 import AdminStaff from './pages/admin/AdminStaff';
 import AdminReviews from './pages/admin/AdminReviews';
 import AdminOffers from './pages/admin/AdminOffers';
+import AdminLogin from './pages/admin/AdminLogin';
 
 function Layout({ children }) {
   return (
@@ -43,8 +46,9 @@ function Layout({ children }) {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <BrowserRouter>
+    <AuthProvider>
+      <ThemeProvider>
+        <BrowserRouter>
         <Routes>
           {/* Public routes with layout */}
           <Route path="/" element={<Layout><Home /></Layout>} />
@@ -59,14 +63,19 @@ export default function App() {
           <Route path="/profile" element={<Layout><Profile /></Layout>} />
           <Route path="/contact" element={<Layout><Contact /></Layout>} />
 
-          {/* Admin routes (no public layout) */}
-          <Route path="/admin" element={<AdminLayout />}>
+          {/* Admin Login - public but only for admins */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+
+          {/* Admin routes (protected) */}
+          <Route element={<ProtectedRoute adminOnly={true} />}>
+            <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="appointments" element={<AdminAppointments />} />
             <Route path="services" element={<AdminServices />} />
             <Route path="staff" element={<AdminStaff />} />
             <Route path="reviews" element={<AdminReviews />} />
             <Route path="offers" element={<AdminOffers />} />
+            </Route>
           </Route>
 
           {/* 404 */}
@@ -74,5 +83,6 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
+    </AuthProvider>
   );
 }

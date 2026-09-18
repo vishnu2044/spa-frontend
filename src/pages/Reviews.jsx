@@ -1,8 +1,8 @@
 // src/pages/Reviews.jsx
 import { useState, useEffect } from 'react';
 import { Star, ThumbsUp } from 'lucide-react';
-import { reviews as seedReviews } from '../data/reviews';
-import { getReviews, saveReview } from '../utils/storage';
+import { fetchReviews, submitReview as submitReviewApi } from '../api/endpoints';
+import { getAvatarUrl } from '../utils/imageUtils';
 import StarRating from '../components/ui/StarRating';
 import Tabs from '../components/ui/Tabs';
 
@@ -14,12 +14,12 @@ function ReviewCard({ review }) {
     <div className="card p-5 animate-fade-in">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-aura-green dark:bg-aura-dark-border flex items-center justify-center text-sm font-semibold text-aura-accent flex-shrink-0">
-            {review.avatar || review.name[0]}
+          <div className="w-9 h-9 rounded-full bg-aura-green dark:bg-aura-dark-border overflow-hidden flex items-center justify-center text-sm font-semibold text-aura-accent flex-shrink-0">
+            <img src={getAvatarUrl(review.name, review.avatar || review.image_url)} alt={review.name} className="w-full h-full object-cover" />
           </div>
           <div>
             <p className="text-sm font-semibold text-aura-text dark:text-aura-dark-text">{review.name}</p>
-            <p className="text-xs text-aura-muted dark:text-aura-dark-muted">{review.serviceLabel || review.service}</p>
+            <p className="text-xs text-aura-muted dark:text-aura-dark-muted">{review.serviceLabel || review.service?.name || review.service}</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
@@ -33,7 +33,7 @@ function ReviewCard({ review }) {
         </div>
       </div>
       <p className="text-sm text-aura-muted dark:text-aura-dark-muted leading-relaxed">"{review.text}"</p>
-      <span className="badge badge-green mt-3">{review.serviceLabel || review.service}</span>
+      <span className="badge badge-green mt-3">{review.serviceLabel || review.service?.name || review.service}</span>
     </div>
   );
 }
@@ -45,26 +45,27 @@ function ReviewForm({ onSubmit }) {
 
   const handle = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.service || !form.text.trim()) {
       setError('Please fill in all required fields.');
       return;
     }
     const newReview = {
-      id: `user-${Date.now()}`,
       name: form.name,
       service: form.service,
       serviceLabel: form.service,
       rating: form.rating,
       text: form.text,
-      date: new Date().toISOString().split('T')[0],
-      avatar: form.name[0].toUpperCase(),
-      verified: false,
       source: 'user',
     };
-    onSubmit(newReview);
-    setSubmitted(true);
+    try {
+      const addedReview = await onSubmit(newReview);
+      setSubmitted(true);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to submit review. Please try again.');
+    }
   };
 
   if (submitted) {
@@ -74,7 +75,7 @@ function ReviewForm({ onSubmit }) {
           <ThumbsUp size={20} className="text-green-600" />
         </div>
         <p className="font-semibold text-aura-text dark:text-aura-dark-text">Thank you for your review!</p>
-        <p className="text-sm text-aura-muted dark:text-aura-dark-muted mt-1">Your review has been added (demo only — local storage).</p>
+        <p className="text-sm text-aura-muted dark:text-aura-dark-muted mt-1">Your review has been successfully added.</p>
       </div>
     );
   }
@@ -82,7 +83,7 @@ function ReviewForm({ onSubmit }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4" aria-label="Submit a review">
       <h3 className="font-semibold text-aura-text dark:text-aura-dark-text">Share Your Experience</h3>
-      <p className="text-xs text-aura-muted dark:text-aura-dark-muted">This is a demo review — stored locally on your device only.</p>
+      <p className="text-xs text-aura-muted dark:text-aura-dark-muted">Submit a review to share your feedback.</p>
 
       {error && <p className="text-xs text-red-500">{error}</p>}
 
@@ -139,6 +140,7 @@ function ReviewForm({ onSubmit }) {
           placeholder="Tell us about your experience…"
           rows={4}
           className="input-field resize-none"
+          maxLength={1000}
         />
       </div>
 
@@ -153,22 +155,34 @@ export default function ReviewsPage() {
   const [filter, setFilter] = useState('All');
   const [allReviews, setAllReviews] = useState([]);
   const [showing, setShowing] = useState(PAGE_SIZE);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userReviews = getReviews();
-    setAllReviews([...userReviews, ...seedReviews]);
+    const loadReviews = async () => {
+      try {
+        const data = await fetchReviews();
+        setAllReviews(data || []);
+      } catch (err) {
+        console.error('Failed to fetch reviews', err);
+        // Fallback or empty state could go here if API fails
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadReviews();
   }, []);
 
-  const handleNewReview = (review) => {
-    saveReview(review);
-    setAllReviews((prev) => [review, ...prev]);
+  const handleNewReview = async (review) => {
+    const data = await submitReviewApi(review);
+    setAllReviews((prev) => [data, ...prev]);
+    return data;
   };
 
   const filtered = filter === 'All'
     ? allReviews
-    : allReviews.filter((r) => r.service === filter || r.serviceLabel?.includes(filter));
+    : allReviews.filter((r) => r.service === filter || r.serviceLabel?.includes(filter) || r.service?.name?.includes(filter));
 
-  const avg = (allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length).toFixed(1);
+  const avg = allReviews.length > 0 ? (allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length).toFixed(1) : "0.0";
 
   return (
     <main className="pt-16 pb-24 md:pb-10 min-h-screen bg-aura-bg dark:bg-aura-dark-bg">
@@ -198,7 +212,11 @@ export default function ReviewsPage() {
           <div className="lg:col-span-2">
             <Tabs tabs={FILTER_TABS} active={filter} onChange={(t) => { setFilter(t); setShowing(PAGE_SIZE); }} className="mb-5" />
 
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-aura-muted dark:text-aura-dark-muted">Loading reviews...</p>
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-3xl mb-3">💬</p>
                 <p className="text-aura-muted dark:text-aura-dark-muted">No reviews in this category yet.</p>
@@ -207,7 +225,7 @@ export default function ReviewsPage() {
               <>
                 <div className="space-y-3">
                   {filtered.slice(0, showing).map((r) => (
-                    <ReviewCard key={r.id} review={r} />
+                    <ReviewCard key={r.id || Math.random()} review={r} />
                   ))}
                 </div>
                 {showing < filtered.length && (

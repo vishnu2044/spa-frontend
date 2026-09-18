@@ -2,8 +2,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Check, Clock, Star, Calendar, User } from 'lucide-react';
-import { services, serviceCategories } from '../data/services';
-import { staff } from '../data/staff';
+import { fetchServices, fetchStaff, createBooking } from '../api/endpoints';
+import { getAvatarUrl } from '../utils/imageUtils';
 import { formatPrice, formatDuration, formatDate, formatTime, getAvailableSlots, getCalendarAvailability } from '../utils/helpers';
 import { saveBooking, addPoints, generateBookingId } from '../utils/storage';
 
@@ -13,9 +13,9 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 // Step 1: Choose Service
-function StepService({ value, onChange }) {
+function StepService({ value, onChange, services, serviceCategories }) {
   const [cat, setCat] = useState('All');
-  const filtered = cat === 'All' ? services : services.filter((s) => s.category === cat);
+  const filtered = cat === 'All' ? services : services.filter((s) => s.category?.name === cat || s.category === cat);
 
   return (
     <div>
@@ -42,10 +42,10 @@ function StepService({ value, onChange }) {
                 : 'border-aura-border dark:border-aura-dark-border hover:border-aura-accent/40'
             }`}
           >
-            <img src={svc.image} alt={svc.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+            <img src={svc.image || svc.image_url} alt={svc.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-aura-text dark:text-aura-dark-text">{svc.name}</p>
-              <p className="text-xs text-aura-muted dark:text-aura-dark-muted">{formatDuration(svc.duration)}</p>
+              <p className="text-xs text-aura-muted dark:text-aura-dark-muted">{formatDuration(svc.duration_minutes || svc.duration)}</p>
             </div>
             <div className="text-right flex-shrink-0">
               <p className="text-sm font-semibold text-aura-text dark:text-aura-dark-text">{formatPrice(svc.price)}</p>
@@ -63,9 +63,9 @@ function StepService({ value, onChange }) {
 }
 
 // Step 2: Choose Specialist
-function StepSpecialist({ service, value, onChange }) {
+function StepSpecialist({ service, value, onChange, staff }) {
   const relevant = service?.category
-    ? staff.filter((s) => s.categories.includes(service.category))
+    ? staff.filter((s) => (s.categories || []).includes(service.category?.name || service.category) || (s.specialties || []).some(sp => (sp?.category || sp) === (service.category?.name || service.category)))
     : staff;
 
   const options = [
@@ -87,8 +87,8 @@ function StepSpecialist({ service, value, onChange }) {
                 : 'border-aura-border dark:border-aura-dark-border hover:border-aura-accent/40'
             }`}
           >
-            {member.image ? (
-              <img src={member.image} alt={member.name} className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
+            {(member.image || member.image_url || member.name) && member.id !== 'any' ? (
+              <img src={getAvatarUrl(member.name, member.image || member.image_url)} alt={member.name} className="w-12 h-12 rounded-full object-cover flex-shrink-0 bg-aura-surface2" />
             ) : (
               <div className="w-12 h-12 rounded-full bg-aura-green dark:bg-aura-dark-surface2 flex items-center justify-center flex-shrink-0">
                 <User size={20} className="text-aura-accent" />
@@ -100,7 +100,7 @@ function StepSpecialist({ service, value, onChange }) {
               {member.rating && (
                 <div className="flex items-center gap-1 mt-0.5">
                   <Star size={11} className="fill-amber-400 text-amber-400" />
-                  <span className="text-xs text-aura-muted dark:text-aura-dark-muted">{member.rating} · {member.reviews} reviews</span>
+                  <span className="text-xs text-aura-muted dark:text-aura-dark-muted">{member.rating_cache || member.rating || 5} · {member.review_count_cache || member.reviews || 0} reviews</span>
                 </div>
               )}
             </div>
@@ -309,6 +309,8 @@ function StepDetails({ value, onChange }) {
             onChange={handle('name')}
             className="input-field"
             autoComplete="name"
+            minLength={2}
+            maxLength={50}
           />
           {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
         </div>
@@ -325,6 +327,8 @@ function StepDetails({ value, onChange }) {
             onChange={handle('phone')}
             className="input-field"
             autoComplete="tel"
+            minLength={10}
+            maxLength={15}
           />
           {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
         </div>
@@ -356,6 +360,7 @@ function StepDetails({ value, onChange }) {
             onChange={handle('notes')}
             rows={3}
             className="input-field resize-none"
+            maxLength={500}
           />
         </div>
       </div>
@@ -429,7 +434,7 @@ function BookingSuccess({ bookingId, booking, onViewBookings, onBookAgain }) {
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <img src={booking.service?.image} alt={booking.service?.name} className="w-10 h-10 rounded-lg object-cover" />
+          <img src={booking.service?.image || booking.service?.image_url} alt={booking.service?.name} className="w-10 h-10 rounded-lg object-cover" />
           <div>
             <p className="font-semibold text-sm text-aura-text dark:text-aura-dark-text">{booking.service?.name}</p>
             <p className="text-xs text-aura-muted dark:text-aura-dark-muted">{formatDate(booking.date)} · {formatTime(booking.time)}</p>
@@ -490,6 +495,31 @@ export default function BookingPage() {
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
   const [bookingId, setBookingId] = useState('');
+  
+  const [servicesData, setServicesData] = useState([]);
+  const [serviceCategoriesData, setServiceCategoriesData] = useState([]);
+  const [staffData, setStaffData] = useState([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [servicesRes, staffRes] = await Promise.all([
+          fetchServices(),
+          fetchStaff()
+        ]);
+        setServicesData(servicesRes || []);
+        
+        // Extract categories
+        const cats = new Set((servicesRes || []).map(s => s.category?.name || s.category).filter(Boolean));
+        setServiceCategoriesData(['All', ...Array.from(cats)]);
+        
+        setStaffData(staffRes || []);
+      } catch (err) {
+        console.error('Error fetching booking data', err);
+      }
+    };
+    loadData();
+  }, []);
 
   const [booking, setBooking] = useState({
     service: null,
@@ -502,14 +532,14 @@ export default function BookingPage() {
   // Pre-select service from URL
   useEffect(() => {
     const serviceId = searchParams.get('service');
-    if (serviceId) {
-      const svc = services.find((s) => s.id === serviceId);
-      if (svc) {
+    if (serviceId && servicesData.length > 0) {
+      const svc = servicesData.find((s) => s.id === serviceId);
+      if (svc && !booking.service) {
         setBooking((b) => ({ ...b, service: svc }));
         setStep(1); // skip to specialist
       }
     }
-  }, [searchParams]);
+  }, [searchParams, servicesData]);
 
   const canProceed = () => {
     switch (step) {
@@ -523,18 +553,36 @@ export default function BookingPage() {
     }
   };
 
-  const handleConfirm = () => {
-    const id = generateBookingId();
-    setBookingId(id);
-    const bookingData = {
-      id,
-      ...booking,
-      status: 'confirmed',
-      createdAt: new Date().toISOString(),
-    };
-    saveBooking(bookingData);
-    addPoints(100);
-    setDone(true);
+  const handleConfirm = async () => {
+    try {
+      const bookingData = {
+        service_id: booking.service.id,
+        staff_id: booking.specialist.id !== 'any' ? booking.specialist.id : null,
+        booking_date: booking.date,
+        booking_time: booking.time,
+        guest_name: booking.customer.name,
+        guest_phone: booking.customer.phone,
+        guest_email: booking.customer.email,
+        special_notes: booking.customer.notes,
+      };
+      
+      const created = await createBooking(bookingData);
+      setBookingId(created.id || generateBookingId());
+      
+      // Keep local copies for now so the user can see them without refreshing
+      const localBooking = {
+        id: created.id || generateBookingId(),
+        ...booking,
+        status: 'confirmed',
+        createdAt: new Date().toISOString(),
+      };
+      saveBooking(localBooking);
+      addPoints(100);
+      setDone(true);
+    } catch (err) {
+      console.error('Failed to create booking', err);
+      alert('Failed to complete booking. Please try again.');
+    }
   };
 
   const reset = () => {
@@ -586,12 +634,15 @@ export default function BookingPage() {
         <div className="bg-aura-surface dark:bg-aura-dark-surface rounded-2xl border border-aura-border dark:border-aura-dark-border p-5 mb-4 animate-slide-up">
           {step === 0 && (
             <StepService
+              services={servicesData}
+              serviceCategories={serviceCategoriesData}
               value={booking.service}
               onChange={(svc) => { setBooking((b) => ({ ...b, service: svc })); setStep(1); }}
             />
           )}
           {step === 1 && (
             <StepSpecialist
+              staff={staffData}
               service={booking.service}
               value={booking.specialist}
               onChange={(sp) => { setBooking((b) => ({ ...b, specialist: sp })); setStep(2); }}

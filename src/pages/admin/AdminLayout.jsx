@@ -2,8 +2,9 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Calendar, Scissors, Users, Package, Star, Tag, Settings, Menu, X, ArrowLeft,
+  LayoutDashboard, Calendar, Scissors, Users, Package, Star, Tag, Settings, Menu, X, ArrowLeft, LogOut
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const sidebarLinks = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
@@ -17,6 +18,12 @@ const sidebarLinks = [
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   return (
     <div className="flex min-h-screen bg-aura-bg dark:bg-aura-dark-bg pt-16">
@@ -67,12 +74,18 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        <div className="p-3 border-t border-aura-border dark:border-aura-dark-border">
+        <div className="p-3 border-t border-aura-border dark:border-aura-dark-border space-y-1">
           <button
             onClick={() => navigate('/')}
-            className="flex items-center gap-2 px-3 py-2 text-xs text-aura-muted dark:text-aura-dark-muted hover:text-aura-text dark:hover:text-aura-dark-text w-full"
+            className="flex items-center gap-2 px-3 py-2 text-xs text-aura-muted dark:text-aura-dark-muted hover:text-aura-text dark:hover:text-aura-dark-text w-full transition-colors"
           >
             <ArrowLeft size={14} /> Back to Website
+          </button>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-3 py-2 text-xs text-red-500 hover:text-red-600 dark:hover:text-red-400 w-full transition-colors"
+          >
+            <LogOut size={14} /> Sign Out
           </button>
         </div>
       </aside>

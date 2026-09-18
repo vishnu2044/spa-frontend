@@ -1,7 +1,9 @@
 // src/pages/admin/AdminStaff.jsx
 import { useState } from 'react';
+import { useEffect } from 'react';
 import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, X, Check } from 'lucide-react';
-import { staff as defaultStaff } from '../../data/staff';
+import { fetchAdminStaff, createAdminStaff, updateAdminStaff, deleteAdminStaff, toggleAdminStaffAvailability } from '../../api/endpoints';
+import { getAvatarUrl } from '../../utils/imageUtils';
 import StarRating from '../../components/ui/StarRating';
 
 const EMPTY = { name: '', role: '', experience: 0, specialties: [], workingDays: ['Monday', 'Wednesday', 'Friday'], workingHours: '9:00 AM – 6:00 PM', bio: '', categories: ['Hair'], image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&q=80' };
@@ -11,13 +13,13 @@ function StaffForm({ value, onChange, onSave, onCancel }) {
   return (
     <div className="space-y-3">
       {[
-        { id: 'st-name', field: 'name', label: 'Full Name *', type: 'text' },
-        { id: 'st-role', field: 'role', label: 'Role *', type: 'text' },
-        { id: 'st-exp', field: 'experience', label: 'Years Experience', type: 'number' },
-      ].map(({ id, field, label, type }) => (
+        { id: 'st-name', field: 'name', label: 'Full Name *', type: 'text', minLength: 2, maxLength: 50 },
+        { id: 'st-role', field: 'role', label: 'Role *', type: 'text', minLength: 2, maxLength: 50 },
+        { id: 'st-exp', field: 'experience', label: 'Years Experience', type: 'number', min: 0 },
+      ].map(({ id, field, label, type, minLength, maxLength, min }) => (
         <div key={field}>
           <label className="text-xs font-medium text-aura-muted dark:text-aura-dark-muted mb-1 block" htmlFor={id}>{label}</label>
-          <input id={id} type={type} value={value[field] || ''} onChange={(e) => onChange({ ...value, [field]: type === 'number' ? Number(e.target.value) : e.target.value })} className="input-field" />
+          <input id={id} type={type} value={value[field] || ''} onChange={(e) => onChange({ ...value, [field]: type === 'number' ? Number(e.target.value) : e.target.value })} className="input-field" minLength={minLength} maxLength={maxLength} min={min} />
         </div>
       ))}
       <div>
@@ -37,30 +39,76 @@ function StaffForm({ value, onChange, onSave, onCancel }) {
 }
 
 export default function AdminStaff() {
-  const [staff, setStaff] = useState(defaultStaff);
+  const [staff, setStaff] = useState([]);
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
   const [newStaff, setNewStaff] = useState(EMPTY);
   const [availability, setAvailability] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  const toggleAvail = (id) => setAvailability((a) => ({ ...a, [id]: a[id] === false ? true : false }));
+  useEffect(() => {
+    const loadStaff = async () => {
+      try {
+        const data = await fetchAdminStaff();
+        setStaff(data || []);
+        
+        // initialize availability state
+        const avail = {};
+        (data || []).forEach(member => {
+          avail[member.id] = member.is_active !== false;
+        });
+        setAvailability(avail);
+      } catch (error) {
+        console.error('Error fetching admin staff', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadStaff();
+  }, []);
+
+  const toggleAvail = async (id) => {
+    const currentStatus = availability[id] !== false;
+    try {
+      await toggleAdminStaffAvailability(id, !currentStatus);
+      setAvailability((a) => ({ ...a, [id]: !currentStatus }));
+    } catch (err) {
+      console.error('Failed to toggle availability', err);
+    }
+  };
+  
   const isAvail = (id) => availability[id] !== false;
 
-  const handleAdd = () => {
-    const id = newStaff.name.toLowerCase().replace(/\s+/g, '-');
-    setStaff((prev) => [...prev, { ...newStaff, id, rating: 4.8, reviews: 0 }]);
-    setNewStaff(EMPTY);
-    setAdding(false);
+  const handleAdd = async () => {
+    try {
+      const added = await createAdminStaff(newStaff);
+      setStaff((prev) => [...prev, added]);
+      setAvailability((a) => ({...a, [added.id]: added.is_active !== false}));
+      setNewStaff(EMPTY);
+      setAdding(false);
+    } catch (err) {
+      console.error('Failed to add staff', err);
+    }
   };
 
-  const handleEdit = () => {
-    setStaff((prev) => prev.map((s) => s.id === editing.id ? editing : s));
-    setEditing(null);
+  const handleEdit = async () => {
+    try {
+      const updated = await updateAdminStaff(editing.id, editing);
+      setStaff((prev) => prev.map((s) => s.id === editing.id ? updated : s));
+      setEditing(null);
+    } catch (err) {
+      console.error('Failed to edit staff', err);
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Remove this staff member?')) {
-      setStaff((prev) => prev.filter((s) => s.id !== id));
+      try {
+        await deleteAdminStaff(id);
+        setStaff((prev) => prev.filter((s) => s.id !== id));
+      } catch (err) {
+        console.error('Failed to delete staff', err);
+      }
     }
   };
 
@@ -92,13 +140,13 @@ export default function AdminStaff() {
           ) : (
             <div key={member.id} className="card p-4">
               <div className="flex items-start gap-3">
-                <img src={member.image} alt={member.name} className={`w-12 h-12 rounded-xl object-cover flex-shrink-0 transition-opacity ${isAvail(member.id) ? 'opacity-100' : 'opacity-40'}`} />
+                <img src={getAvatarUrl(member.name, member.image || member.image_url)} alt={member.name} className={`w-12 h-12 rounded-xl object-cover flex-shrink-0 transition-opacity ${isAvail(member.id) ? 'opacity-100' : 'opacity-40'} bg-aura-surface2 dark:bg-aura-dark-surface2`} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-aura-text dark:text-aura-dark-text">{member.name}</p>
                   <p className="text-xs text-aura-muted dark:text-aura-dark-muted">{member.role}</p>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <StarRating rating={Math.round(member.rating)} size={11} />
-                    <span className="text-xs text-aura-muted dark:text-aura-dark-muted">{member.rating}</span>
+                    <StarRating rating={Math.round(member.rating_cache || member.rating || 5)} size={11} />
+                    <span className="text-xs text-aura-muted dark:text-aura-dark-muted">{member.rating_cache || member.rating || 5}</span>
                   </div>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
@@ -114,8 +162,8 @@ export default function AdminStaff() {
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-1">
-                {member.specialties.slice(0, 3).map((s) => (
-                  <span key={s} className="px-2 py-0.5 bg-aura-surface2 dark:bg-aura-dark-surface2 text-xs text-aura-muted dark:text-aura-dark-muted rounded-full">{s}</span>
+                {(member.specialties || []).slice(0, 3).map((s) => (
+                  <span key={s?.category || s} className="px-2 py-0.5 bg-aura-surface2 dark:bg-aura-dark-surface2 text-xs text-aura-muted dark:text-aura-dark-muted rounded-full">{s?.category || s}</span>
                 ))}
               </div>
               {!isAvail(member.id) && (

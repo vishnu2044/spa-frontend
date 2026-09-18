@@ -1,7 +1,7 @@
 // src/pages/admin/AdminAppointments.jsx
 import { useState, useEffect } from 'react';
 import { Check, X, Eye } from 'lucide-react';
-import { getBookings, saveBooking } from '../../utils/storage';
+import { fetchAdminBookings, updateBookingStatus } from '../../api/endpoints';
 import { formatDate, formatTime, formatPrice } from '../../utils/helpers';
 import Modal from '../../components/ui/Modal';
 
@@ -12,13 +12,7 @@ const STATUS_MAP = {
   cancelled: 'badge-red',
 };
 
-const SAMPLE = [
-  { id: 'AURA-2026-0917-1001', service: { name: 'Signature Haircut', price: 500, image: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?w=100&q=80' }, specialist: { name: 'Ananya Nair' }, date: '2026-09-17', time: '09:30', customer: { name: 'Priya R.', phone: '9876543210' }, status: 'confirmed' },
-  { id: 'AURA-2026-0917-1002', service: { name: 'Indian Head Massage', price: 600, image: 'https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?w=100&q=80' }, specialist: { name: 'Riya Thomas' }, date: '2026-09-17', time: '10:30', customer: { name: 'Rahul M.', phone: '9876543211' }, status: 'confirmed' },
-  { id: 'AURA-2026-0917-1003', service: { name: 'Classic Facial', price: 1000, image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=100&q=80' }, specialist: { name: 'Meera Krishnan' }, date: '2026-09-17', time: '11:00', customer: { name: 'Sana A.', phone: '9876543212' }, status: 'completed' },
-  { id: 'AURA-2026-0918-1004', service: { name: 'HydraFacial', price: 2200, image: 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=100&q=80' }, specialist: { name: 'Meera Krishnan' }, date: '2026-09-18', time: '12:00', customer: { name: 'Divya M.', phone: '9876543213' }, status: 'confirmed' },
-  { id: 'AURA-2026-0918-1005', service: { name: 'Bridal Makeup', price: 5000, image: 'https://images.unsplash.com/photo-1503236823255-94609f598e71?w=100&q=80' }, specialist: { name: 'Diya Menon' }, date: '2026-09-18', time: '14:00', customer: { name: 'Anjali S.', phone: '9876543214' }, status: 'pending' },
-];
+// Removed SAMPLE since we are fetching from backend
 
 function AppointmentModal({ booking, onClose, onUpdate }) {
   if (!booking) return null;
@@ -26,7 +20,7 @@ function AppointmentModal({ booking, onClose, onUpdate }) {
     <Modal isOpen={!!booking} onClose={onClose} title="Appointment Details">
       <div className="p-5 space-y-4">
         <div className="flex items-center gap-3">
-          <img src={booking.service?.image} alt="" className="w-12 h-12 rounded-xl object-cover" />
+          <img src={booking.service?.image || booking.service?.image_url} alt="" className="w-12 h-12 rounded-xl object-cover" />
           <div>
             <p className="font-semibold text-aura-text dark:text-aura-dark-text">{booking.service?.name}</p>
             <p className="text-xs font-mono text-aura-muted dark:text-aura-dark-muted">{booking.id}</p>
@@ -70,16 +64,24 @@ export default function AdminAppointments() {
   const [statusFilter, setStatusFilter] = useState('All');
 
   useEffect(() => {
-    const stored = getBookings();
-    setBookings(stored.length > 0 ? stored : SAMPLE);
+    const loadData = async () => {
+      try {
+        const data = await fetchAdminBookings();
+        setBookings(data || []);
+      } catch (err) {
+        console.error('Failed to fetch admin bookings', err);
+      }
+    };
+    loadData();
   }, []);
 
-  const handleUpdate = (id, status) => {
-    setBookings((prev) => {
-      const updated = prev.map((b) => b.id === id ? { ...b, status } : b);
-      updated.forEach((b) => b.id === id && saveBooking(b));
-      return updated;
-    });
+  const handleUpdate = async (id, status) => {
+    try {
+      await updateBookingStatus(id, status);
+      setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status } : b));
+    } catch (err) {
+      console.error('Failed to update status', err);
+    }
   };
 
   const filtered = statusFilter === 'All' ? bookings : bookings.filter((b) => b.status === statusFilter);

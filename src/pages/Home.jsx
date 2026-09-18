@@ -5,18 +5,40 @@ import { ArrowRight } from 'lucide-react';
 import HeroIntro from '../components/home/HeroIntro';
 import TrustStrip from '../components/home/TrustStrip';
 import QuickBookBar from '../components/home/QuickBookBar';
-import { services } from '../data/services';
-import { staff } from '../data/staff';
-import { reviews } from '../data/reviews';
+import { useState, useEffect } from 'react';
+import { fetchServices, fetchStaff, fetchReviews } from '../api/endpoints';
+import { getAvatarUrl } from '../utils/imageUtils';
 import { formatPrice, formatDuration } from '../utils/helpers';
 import StarRating from '../components/ui/StarRating';
 import { SkeletonRow } from '../components/ui/Skeleton';
 
 export default function Home() {
   const navigate = useNavigate();
-  const popularServices = services.filter((s) => s.popular).slice(0, 4);
-  const featuredStaff = staff.slice(0, 3);
-  const featuredReviews = reviews.slice(0, 3);
+  const [popularServices, setPopularServices] = useState([]);
+  const [featuredStaff, setFeaturedStaff] = useState([]);
+  const [featuredReviews, setFeaturedReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadHomeData = async () => {
+      try {
+        const [servicesData, staffData, reviewsData] = await Promise.all([
+          fetchServices(),
+          fetchStaff(),
+          fetchReviews()
+        ]);
+        
+        setPopularServices((servicesData || []).filter(s => s.is_popular || s.popular).slice(0, 4));
+        setFeaturedStaff((staffData || []).slice(0, 3));
+        setFeaturedReviews((reviewsData || []).slice(0, 3));
+      } catch (err) {
+        console.error('Failed to load home data', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadHomeData();
+  }, []);
 
   return (
     <main>
@@ -54,14 +76,14 @@ export default function Home() {
                 onKeyDown={(e) => e.key === 'Enter' && navigate('/services', { state: { openService: service.id } })}
               >
                 <img
-                  src={service.image}
+                  src={service.image || service.image_url}
                   alt={service.name}
                   className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
                   loading="lazy"
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-aura-text dark:text-aura-dark-text">{service.name}</p>
-                  <p className="text-xs text-aura-muted dark:text-aura-dark-muted mt-0.5">{formatDuration(service.duration)}</p>
+                  <p className="text-xs text-aura-muted dark:text-aura-dark-muted mt-0.5">{formatDuration(service.duration_minutes || service.duration)}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-sm font-semibold text-aura-text dark:text-aura-dark-text">{formatPrice(service.price)}</p>
@@ -125,17 +147,17 @@ export default function Home() {
                 className="card-hover p-4 flex gap-4 items-start"
               >
                 <img
-                  src={member.image}
+                  src={getAvatarUrl(member.name, member.image || member.image_url)}
                   alt={member.name}
-                  className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
+                  className="w-14 h-14 rounded-xl object-cover flex-shrink-0 bg-aura-surface2"
                   loading="lazy"
                 />
                 <div>
                   <p className="text-sm font-semibold text-aura-text dark:text-aura-dark-text">{member.name}</p>
                   <p className="text-xs text-aura-muted dark:text-aura-dark-muted">{member.role}</p>
                   <div className="flex items-center gap-1 mt-1.5">
-                    <StarRating rating={Math.round(member.rating)} size={12} />
-                    <span className="text-xs text-aura-muted dark:text-aura-dark-muted">{member.rating}</span>
+                    <StarRating rating={Math.round(member.rating_cache || member.rating || 5)} size={12} />
+                    <span className="text-xs text-aura-muted dark:text-aura-dark-muted">{member.rating_cache || member.rating || 5}</span>
                   </div>
                 </div>
               </Link>
@@ -160,8 +182,8 @@ export default function Home() {
             {featuredReviews.map((review) => (
               <div key={review.id} className="card p-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded-full bg-aura-green dark:bg-aura-dark-border flex items-center justify-center text-sm font-medium text-aura-accent">
-                    {review.avatar}
+                  <div className="w-8 h-8 rounded-full bg-aura-green dark:bg-aura-dark-border flex items-center justify-center text-sm font-medium text-aura-accent overflow-hidden">
+                    <img src={getAvatarUrl(review.name, review.avatar || review.image_url)} alt={review.name} className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-aura-text dark:text-aura-dark-text">{review.name}</p>
@@ -171,7 +193,7 @@ export default function Home() {
                 <p className="text-sm text-aura-muted dark:text-aura-dark-muted leading-relaxed line-clamp-3">
                   "{review.text}"
                 </p>
-                <span className="badge badge-green mt-3">{review.serviceLabel}</span>
+                <span className="badge badge-green mt-3">{review.serviceLabel || review.service?.name || review.service}</span>
               </div>
             ))}
           </div>

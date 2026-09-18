@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, User, ChevronRight, X, RotateCcw, CalendarPlus, ArrowRight } from 'lucide-react';
-import { getBookings, cancelBooking } from '../utils/storage';
+import { fetchMyBookings, cancelBooking as cancelBookingApi } from '../api/endpoints';
 import { formatDate, formatTime, formatPrice, isDatePast, generateICS } from '../utils/helpers';
 import Modal from '../components/ui/Modal';
 
@@ -29,7 +29,7 @@ function BookingCard({ booking, onView }) {
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-center gap-2">
           <img
-            src={booking.service?.image}
+            src={booking.service?.image || booking.service?.image_url}
             alt={booking.service?.name}
             className="w-10 h-10 rounded-lg object-cover"
           />
@@ -86,7 +86,7 @@ function BookingDetailModal({ booking, onClose, onCancel }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <img src={booking.service?.image} alt={booking.service?.name} className="w-14 h-14 rounded-xl object-cover" />
+          <img src={booking.service?.image || booking.service?.image_url} alt={booking.service?.name} className="w-14 h-14 rounded-xl object-cover" />
           <div>
             <p className="font-semibold text-aura-text dark:text-aura-dark-text">{booking.service?.name}</p>
             <p className="text-sm text-aura-muted dark:text-aura-dark-muted">{formatPrice(booking.service?.price)}</p>
@@ -141,18 +141,43 @@ export default function BookingsPage() {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setBookings(getBookings());
-  }, []);
-
-  const handleCancel = (id) => {
-    const updated = cancelBooking(id);
-    setBookings(updated);
+  const loadBookings = async () => {
+    try {
+      const data = await fetchMyBookings();
+      setBookings(data || []);
+    } catch (err) {
+      console.error('Failed to fetch bookings', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const upcoming = bookings.filter((b) => !isDatePast(b.date) && b.status !== 'cancelled');
-  const past = bookings.filter((b) => isDatePast(b.date) || b.status === 'cancelled');
+  useEffect(() => {
+    loadBookings();
+  }, []);
+
+  const handleCancel = async (id) => {
+    try {
+      await cancelBookingApi(id);
+      loadBookings(); // reload list
+    } catch (err) {
+      console.error('Failed to cancel booking', err);
+      alert('Failed to cancel booking');
+    }
+  };
+
+  const upcoming = bookings.filter((b) => !isDatePast(b.booking_date || b.date) && b.status !== 'cancelled');
+  const past = bookings.filter((b) => isDatePast(b.booking_date || b.date) || b.status === 'cancelled');
+
+  if (loading) {
+    return (
+      <main className="pt-16 pb-24 md:pb-10 min-h-screen bg-aura-bg dark:bg-aura-dark-bg flex items-center justify-center">
+        <div className="text-center px-4 text-aura-muted">Loading bookings...</div>
+      </main>
+    );
+  }
 
   if (bookings.length === 0) {
     return (
