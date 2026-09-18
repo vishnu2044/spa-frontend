@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { Search, X, Clock, ChevronRight, Check } from 'lucide-react';
-import { services, serviceCategories } from '../data/services';
+import { fetchServices } from '../api/endpoints';
 import { formatPrice, formatDuration } from '../utils/helpers';
 import Tabs from '../components/ui/Tabs';
 import Modal from '../components/ui/Modal';
@@ -15,7 +15,7 @@ function ServiceModal({ service, onClose, onBook }) {
     <Modal isOpen={!!service} onClose={onClose} title={service.name} size="md">
       <div className="p-5 space-y-5">
         <img
-          src={service.image}
+          src={service.image || service.image_url}
           alt={service.name}
           className="w-full h-48 object-cover rounded-xl"
         />
@@ -27,10 +27,10 @@ function ServiceModal({ service, onClose, onBook }) {
             </p>
             <div className="flex items-center gap-1.5 text-sm text-aura-muted dark:text-aura-dark-muted mt-0.5">
               <Clock size={13} />
-              {formatDuration(service.duration)}
+              {formatDuration(service.duration_minutes || service.duration)}
             </div>
           </div>
-          <span className="badge badge-green">{service.category}</span>
+          <span className="badge badge-green">{service.category?.name || service.category}</span>
         </div>
 
         <div>
@@ -77,12 +77,24 @@ export default function ServicesPage() {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState('All');
   const [search, setSearch] = useState('');
-  const [selectedService, setSelectedService] = useState(null);
+  const [servicesData, setServicesData] = useState([]);
+  const [serviceCategories, setServiceCategories] = useState(['All']);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 500);
-    return () => clearTimeout(t);
+    const loadServices = async () => {
+      try {
+        const data = await fetchServices();
+        setServicesData(data || []);
+        const cats = new Set((data || []).map(s => s.category?.name || s.category).filter(Boolean));
+        setServiceCategories(['All', ...Array.from(cats)]);
+      } catch (err) {
+        console.error('Failed to load services', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadServices();
   }, []);
 
   // Check URL params for category
@@ -96,28 +108,28 @@ export default function ServicesPage() {
 
   // Open service from state
   useEffect(() => {
-    if (location.state?.openService) {
-      const svc = services.find((s) => s.id === location.state.openService);
+    if (location.state?.openService && servicesData.length > 0) {
+      const svc = servicesData.find((s) => s.id === location.state.openService);
       if (svc) setSelectedService(svc);
     }
-  }, [location.state]);
+  }, [location.state, servicesData]);
 
   const filtered = useMemo(() => {
-    let result = services;
+    let result = servicesData;
     if (activeCategory !== 'All') {
-      result = result.filter((s) => s.category === activeCategory);
+      result = result.filter((s) => (s.category?.name || s.category) === activeCategory);
     }
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
         (s) =>
           s.name.toLowerCase().includes(q) ||
-          s.category.toLowerCase().includes(q) ||
-          s.description.toLowerCase().includes(q)
+          (s.category?.name || s.category || '').toLowerCase().includes(q) ||
+          (s.description || '').toLowerCase().includes(q)
       );
     }
     return result;
-  }, [activeCategory, search]);
+  }, [activeCategory, search, servicesData]);
 
   const handleBook = (serviceId) => {
     navigate(`/booking?service=${serviceId}`);
@@ -193,7 +205,7 @@ export default function ServicesPage() {
                 onKeyDown={(e) => e.key === 'Enter' && setSelectedService(service)}
               >
                 <img
-                  src={service.image}
+                  src={service.image || service.image_url}
                   alt={service.name}
                   className="w-14 h-14 rounded-xl object-cover flex-shrink-0"
                   loading="lazy"

@@ -1,7 +1,7 @@
 // src/pages/admin/AdminServices.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, X, Check } from 'lucide-react';
-import { services as defaultServices } from '../../data/services';
+import { fetchServices, createAdminService, updateAdminService, deleteAdminService, toggleAdminServiceStatus } from '../../api/endpoints';
 import { formatPrice, formatDuration } from '../../utils/helpers';
 import Modal from '../../components/ui/Modal';
 
@@ -46,33 +46,76 @@ function ServiceForm({ value, onChange, onSave, onCancel }) {
 }
 
 export default function AdminServices() {
-  const [services, setServices] = useState(defaultServices);
+  const [services, setServices] = useState([]);
   const [editing, setEditing] = useState(null);
   const [adding, setAdding] = useState(false);
   const [newService, setNewService] = useState(EMPTY);
   const [activeStates, setActiveStates] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  const toggleActive = (id) => {
-    setActiveStates((prev) => ({ ...prev, [id]: prev[id] === false ? true : false }));
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await fetchServices();
+        setServices(data || []);
+        const initialActive = {};
+        (data || []).forEach(s => {
+          initialActive[s.id] = s.status !== 'inactive';
+        });
+        setActiveStates(initialActive);
+      } catch (err) {
+        console.error('Failed to load services', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  const toggleActive = async (id) => {
+    const currentActive = activeStates[id] !== false;
+    const newStatus = currentActive ? 'inactive' : 'active';
+    try {
+      await toggleAdminServiceStatus(id, newStatus);
+      setActiveStates((prev) => ({ ...prev, [id]: !currentActive }));
+    } catch (err) {
+      console.error('Failed to toggle status', err);
+    }
   };
 
   const isActive = (id) => activeStates[id] !== false;
 
-  const handleAdd = () => {
-    const id = newService.name.toLowerCase().replace(/\s+/g, '-');
-    setServices((prev) => [...prev, { ...newService, id, image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=400&q=80', popular: false }]);
-    setNewService(EMPTY);
-    setAdding(false);
+  const handleAdd = async () => {
+    try {
+      // Backend expects category_id in reality, but assuming API handles category object/string correctly based on the updated api_validations/backendNeeds logic.
+      const added = await createAdminService(newService);
+      setServices((prev) => [...prev, added]);
+      setActiveStates((prev) => ({ ...prev, [added.id]: added.status !== 'inactive' }));
+      setNewService(EMPTY);
+      setAdding(false);
+    } catch (err) {
+      console.error('Failed to add service', err);
+    }
   };
 
-  const handleEdit = (service) => {
-    setServices((prev) => prev.map((s) => s.id === service.id ? service : s));
-    setEditing(null);
+  const handleEdit = async (service) => {
+    try {
+      const updated = await updateAdminService(service.id, service);
+      setServices((prev) => prev.map((s) => s.id === service.id ? updated : s));
+      setEditing(null);
+    } catch (err) {
+      console.error('Failed to edit service', err);
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Delete this service?')) {
-      setServices((prev) => prev.filter((s) => s.id !== id));
+      try {
+        await deleteAdminService(id);
+        setServices((prev) => prev.filter((s) => s.id !== id));
+      } catch (err) {
+        console.error('Failed to delete service', err);
+      }
     }
   };
 
@@ -81,7 +124,7 @@ export default function AdminServices() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-serif text-2xl text-aura-text dark:text-aura-dark-text">Services</h1>
-          <p className="text-sm text-aura-muted dark:text-aura-dark-muted">{services.length} services</p>
+          <p className="text-sm text-aura-muted dark:text-aura-dark-muted">{loading ? 'Loading...' : `${services.length} services`}</p>
         </div>
         <button onClick={() => setAdding(true)} className="btn-primary text-xs">
           <Plus size={14} /> Add Service

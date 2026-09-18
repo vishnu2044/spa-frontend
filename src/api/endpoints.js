@@ -124,6 +124,27 @@ export const deleteAdminStaff = async (id) => {
   return data;
 };
 
+// Admin Services
+export const createAdminService = async (serviceData) => {
+  const { data } = await apiClient.post('/admin/services', serviceData);
+  return data;
+};
+
+export const updateAdminService = async (id, serviceData) => {
+  const { data } = await apiClient.put(`/admin/services/${id}`, serviceData);
+  return data;
+};
+
+export const deleteAdminService = async (id) => {
+  const { data } = await apiClient.delete(`/admin/services/${id}`);
+  return data;
+};
+
+export const toggleAdminServiceStatus = async (id, status) => {
+  const { data } = await apiClient.patch(`/admin/services/${id}/status`, { status });
+  return data;
+};
+
 // Auth
 export const loginUser = async (credentials) => {
   const { data } = await apiClient.post('/auth/login', credentials);
