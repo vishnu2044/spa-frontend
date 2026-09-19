@@ -145,8 +145,20 @@ Fetch available time slots.
 - `staff_id`: (String, Optional)
 - `service_duration`: (Integer, Optional)
 
-**Validations:**
-Currently returns dummy data `{"message": "Not implemented yet"}`.
+**Validations:** None.
+
+**Response (200 OK)**
+```json
+{
+  "booked_slots": [
+    {
+      "time": "10:00:00",
+      "duration_minutes": 45,
+      "staff_id": "uuid-123"
+    }
+  ]
+}
+```
 
 ---
 
@@ -320,8 +332,18 @@ Retrieve all users.
 ### `GET /users/me`
 Get current user details.
 
-**Validations:**
-- `404 Not Found` if no users exist (temporary stub implementation).
+**Validations:** No specific validations.
+
+**Response (200 OK)**
+```json
+{
+  "id": "uuid",
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "role": "staff",
+  "staff_id": "uuid" // Included if user has a staff profile
+}
+```
 
 ---
 
@@ -431,7 +453,10 @@ Retrieve published reviews.
     "comment": "Great service!",
     "status": "published",
     "created_at": "2026-09-17T10:00:00Z",
-    "updated_at": "2026-09-17T10:00:00Z"
+    "customer": {
+       "id": "uuid",
+       "name": "John Doe"
+    }
   }
 ]
 ```
@@ -459,3 +484,73 @@ Submit a new review.
 
 **Response (200 OK)**
 Returns the created `Review` object.
+ 
+ # #   7 .   O f f e r s ,   P a c k a g e s ,   a n d   G a l l e r y   E n d p o i n t s 
+ 
+ # # #   ` G E T   / o f f e r s ` 
+ R e t r i e v e   a c t i v e   o f f e r s . 
+ 
+ * * R e s p o n s e   ( 2 0 0   O K ) * * 
+ ` ` ` j s o n 
+ [ 
+     { 
+         " i d " :   " u u i d " , 
+         " t i t l e " :   " S u m m e r   S p e c i a l " , 
+         " d e s c r i p t i o n " :   " 2 0 %   o f f   a l l   m a s s a g e s " , 
+         " d i s c o u n t _ l a b e l " :   " 2 0 %   O F F " , 
+         " p r o m o _ c o d e " :   " S U M M E R 2 0 " , 
+         " s t a t u s " :   " a c t i v e " , 
+         " h a s _ c o u n t d o w n " :   f a l s e 
+     } 
+ ] 
+ ` ` ` 
+ 
+ # # #   ` P O S T   / o f f e r s ` 
+ C r e a t e   a   n e w   o f f e r   ( A d m i n   o n l y ) . 
+ 
+ * * R e q u e s t   P a y l o a d   ( ` a p p l i c a t i o n / j s o n ` ) * * 
+ R e q u i r e s   ` t i t l e ` .   O t h e r   f i e l d s   o p t i o n a l . 
+ 
+ # # #   ` G E T   / p a c k a g e s ` 
+ R e t r i e v e   a l l   p a c k a g e s . 
+ 
+ * * R e s p o n s e   ( 2 0 0   O K ) * * 
+ ` ` ` j s o n 
+ [ 
+     { 
+         " i d " :   " u u i d " , 
+         " n a m e " :   " B r i d a l   P a c k a g e " , 
+         " p r i c e " :   2 9 9 . 9 9 , 
+         " d u r a t i o n _ m i n u t e s " :   1 8 0 , 
+         " i s _ p o p u l a r " :   t r u e 
+     } 
+ ] 
+ ` ` ` 
+ 
+ # # #   ` P O S T   / p a c k a g e s ` 
+ C r e a t e   a   n e w   p a c k a g e   ( A d m i n   o n l y ) . 
+ 
+ * * R e q u e s t   P a y l o a d   ( ` a p p l i c a t i o n / j s o n ` ) * * 
+ R e q u i r e s   ` n a m e ` ,   ` p r i c e ` ,   a n d   ` d u r a t i o n _ m i n u t e s ` . 
+ 
+ # # #   ` G E T   / g a l l e r y ` 
+ R e t r i e v e   g a l l e r y   i t e m s . 
+ 
+ * * R e s p o n s e   ( 2 0 0   O K ) * * 
+ ` ` ` j s o n 
+ [ 
+     { 
+         " i d " :   " u u i d " , 
+         " i m a g e _ u r l " :   " h t t p s : / / . . . " , 
+         " c a p t i o n " :   " B e a u t i f u l   s p a   i n t e r i o r " 
+     } 
+ ] 
+ ` ` ` 
+ 
+ # # #   ` P O S T   / g a l l e r y ` 
+ C r e a t e   a   n e w   g a l l e r y   i t e m   ( A d m i n   o n l y ) . 
+ 
+ * * R e q u e s t   P a y l o a d   ( ` a p p l i c a t i o n / j s o n ` ) * * 
+ R e q u i r e s   ` i m a g e _ u r l ` . 
+  
+ 

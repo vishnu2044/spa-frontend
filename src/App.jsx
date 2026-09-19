@@ -69,14 +69,17 @@ export default function App() {
           <Route path="/admin/login" element={<AdminLogin />} />
 
           {/* Admin routes (protected) */}
-          <Route element={<ProtectedRoute adminOnly={true} />}>
-            <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="appointments" element={<AdminAppointments />} />
-            <Route path="services" element={<AdminServices />} />
-            <Route path="staff" element={<AdminStaff />} />
-            <Route path="reviews" element={<AdminReviews />} />
-            <Route path="offers" element={<AdminOffers />} />
+          <Route path="/admin" element={<ProtectedRoute staffAllowed={true} />}>
+            <Route element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="appointments" element={<AdminAppointments />} />
+              <Route path="reviews" element={<AdminReviews />} />
+              
+              <Route element={<ProtectedRoute adminOnly={true} />}>
+                <Route path="services" element={<AdminServices />} />
+                <Route path="staff" element={<AdminStaff />} />
+                <Route path="offers" element={<AdminOffers />} />
+              </Route>
             </Route>
           </Route>
 

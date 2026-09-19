@@ -51,7 +51,7 @@ export default function AdminOffers() {
     const loadOffers = async () => {
       try {
         const data = await fetchAdminOffers();
-        setOffers(data || []);
+        setOffers(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Failed to load offers', err);
       } finally {

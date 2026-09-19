@@ -63,7 +63,8 @@ export const submitReview = async (review) => {
 
 // Bookings
 export const fetchAvailability = async (date, staffId) => {
-  const params = { date, staff_id: staffId };
+  const params = { date };
+  if (staffId) params.staff_id = staffId;
   const { data } = await apiClient.get('/bookings/availability', { params });
   return data;
 };
@@ -161,9 +162,11 @@ export const deleteAdminReview = async (id) => {
   return data;
 };
 
+
+
 // Admin Offers
 export const fetchAdminOffers = async () => {
-  const { data } = await apiClient.get('/offers'); // Assuming same as public for now, or /admin/offers if separate
+  const { data } = await apiClient.get('/offers'); 
   return data;
 };
 
@@ -187,13 +190,39 @@ export const deleteAdminOffer = async (id) => {
   return data;
 };
 
-// Auth
+// Auth & Users
 export const loginUser = async (credentials) => {
-  const { data } = await apiClient.post('/auth/login', credentials);
+  const formData = new URLSearchParams();
+  formData.append('grant_type', 'password');
+  formData.append('username', credentials.username);
+  formData.append('password', credentials.password);
+  formData.append('scope', '');
+  formData.append('client_id', 'string');
+  formData.append('client_secret', '********');
+  
+  const { data } = await apiClient.post('/auth/login', formData, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+  });
   return data;
 };
 
-export const registerUser = async (userInfo) => {
-  const { data } = await apiClient.post('/auth/register', userInfo);
+export const registerUser = async (userData) => {
+  const { data } = await apiClient.post('/auth/register', userData);
   return data;
 };
+
+export const fetchUsers = async () => {
+  const { data } = await apiClient.get('/users');
+  return data;
+};
+
+export const makeAdmin = async (userId) => {
+  const { data } = await apiClient.put(`/users/${userId}/make-admin`);
+  return data;
+};
+
+export const createStaff = async (staffData) => {
+  const { data } = await apiClient.post('/admin/staff', staffData);
+  return data;
+};
+

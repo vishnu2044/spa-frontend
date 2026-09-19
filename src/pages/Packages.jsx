@@ -155,8 +155,8 @@ export default function PackagesPage() {
           fetchPackages(),
           fetchServices()
         ]);
-        setPackages(pkgs || []);
-        setBuildableServices((svcs || []).filter(s => s.price < 2000).slice(0, 6)); // Just take some services for builder
+        setPackages(Array.isArray(pkgs) ? pkgs : []);
+        setBuildableServices((Array.isArray(svcs) ? svcs : []).filter(s => s.price < 2000).slice(0, 6)); // Just take some services for builder
       } catch (err) {
         console.error('Failed to load packages', err);
       } finally {

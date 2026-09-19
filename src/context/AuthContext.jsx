@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { loginAdmin, fetchCurrentUser } from '../api/endpoints';
+import { loginUser, fetchCurrentUser } from '../api/endpoints';
 
 const AuthContext = createContext();
 
@@ -25,7 +25,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password) => {
-    const data = await loginAdmin({ email, password });
+    // For FastAPI OAuth2 password flow, we need username and password
+    const data = await loginUser({ username: email, password });
     if (data.access_token) {
       localStorage.setItem('aura_token', data.access_token);
       // Fetch user profile to get roles
@@ -47,7 +48,8 @@ export function AuthProvider({ children }) {
     login,
     logout,
     isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin'
+    isAdmin: user?.role === 'admin' || user?.is_superuser,
+    isStaff: user?.role === 'staff' || user?.role === 'admin'
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

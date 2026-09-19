@@ -1,8 +1,8 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-export default function ProtectedRoute({ adminOnly = false }) {
-  const { user, isAuthenticated, loading, isAdmin } = useAuth();
+export default function ProtectedRoute({ adminOnly = false, staffAllowed = false }) {
+  const { user, isAuthenticated, loading, isAdmin, isStaff } = useAuth();
 
   if (loading) {
     return (
@@ -18,6 +18,10 @@ export default function ProtectedRoute({ adminOnly = false }) {
 
   if (adminOnly && !isAdmin) {
     // If they are logged in but not an admin, redirect them to home
+    return <Navigate to="/" replace />;
+  }
+
+  if (staffAllowed && !isStaff) {
     return <Navigate to="/" replace />;
   }
 

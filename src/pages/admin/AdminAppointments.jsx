@@ -28,11 +28,11 @@ function AppointmentModal({ booking, onClose, onUpdate }) {
         </div>
         <div className="space-y-2 text-sm">
           {[
-            ['Customer', booking.customer?.name],
-            ['Phone', booking.customer?.phone],
-            ['Specialist', booking.specialist?.name],
-            ['Date', formatDate(booking.date)],
-            ['Time', formatTime(booking.time)],
+            ['Customer', booking.customer?.name || booking.guest_name],
+            ['Phone', booking.customer?.phone || booking.guest_phone],
+            ['Specialist', booking.staff?.name || booking.specialist?.name],
+            ['Date', formatDate(booking.booking_date || booking.date)],
+            ['Time', formatTime(booking.booking_time || booking.time)],
             ['Amount', formatPrice(booking.service?.price || 0)],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between">
@@ -118,11 +118,11 @@ export default function AdminAppointments() {
           <tbody className="divide-y divide-aura-border dark:divide-aura-dark-border">
             {filtered.map((b) => (
               <tr key={b.id} className="hover:bg-aura-surface2/50 dark:hover:bg-aura-dark-surface2/50 transition-colors">
-                <td className="px-4 py-3 font-medium text-aura-text dark:text-aura-dark-text">{b.customer?.name}</td>
+                <td className="px-4 py-3 font-medium text-aura-text dark:text-aura-dark-text">{b.customer?.name || b.guest_name}</td>
                 <td className="px-4 py-3 text-aura-text dark:text-aura-dark-text">{b.service?.name}</td>
-                <td className="px-4 py-3 text-aura-muted dark:text-aura-dark-muted">{b.specialist?.name}</td>
-                <td className="px-4 py-3 text-aura-muted dark:text-aura-dark-muted">{formatDate(b.date)}</td>
-                <td className="px-4 py-3 text-aura-muted dark:text-aura-dark-muted">{formatTime(b.time)}</td>
+                <td className="px-4 py-3 text-aura-muted dark:text-aura-dark-muted">{b.staff?.name || b.specialist?.name}</td>
+                <td className="px-4 py-3 text-aura-muted dark:text-aura-dark-muted">{formatDate(b.booking_date || b.date)}</td>
+                <td className="px-4 py-3 text-aura-muted dark:text-aura-dark-muted">{formatTime(b.booking_time || b.time)}</td>
                 <td className="px-4 py-3 font-medium text-aura-text dark:text-aura-dark-text">{formatPrice(b.service?.price || 0)}</td>
                 <td className="px-4 py-3">
                   <span className={`badge ${STATUS_MAP[b.status] || 'badge-green'} capitalize`}>{b.status}</span>
@@ -157,11 +157,11 @@ export default function AdminAppointments() {
             <div className="flex items-start justify-between mb-2">
               <div>
                 <p className="text-sm font-medium text-aura-text dark:text-aura-dark-text">{b.service?.name}</p>
-                <p className="text-xs text-aura-muted dark:text-aura-dark-muted">{b.customer?.name} · {b.specialist?.name}</p>
+                <p className="text-xs text-aura-muted dark:text-aura-dark-muted">{b.customer?.name || b.guest_name} · {b.staff?.name || b.specialist?.name}</p>
               </div>
               <span className={`badge ${STATUS_MAP[b.status] || 'badge-green'} capitalize`}>{b.status}</span>
             </div>
-            <p className="text-xs text-aura-muted dark:text-aura-dark-muted mb-3">{formatDate(b.date)} · {formatTime(b.time)} · {formatPrice(b.service?.price || 0)}</p>
+            <p className="text-xs text-aura-muted dark:text-aura-dark-muted mb-3">{formatDate(b.booking_date || b.date)} · {formatTime(b.booking_time || b.time)} · {formatPrice(b.service?.price || 0)}</p>
             <div className="flex gap-2">
               <button onClick={() => setSelected(b)} className="btn-secondary text-xs flex-1 justify-center py-1.5">View</button>
               {b.status !== 'completed' && <button onClick={() => handleUpdate(b.id, 'completed')} className="btn-primary text-xs flex-1 justify-center py-1.5">Complete</button>}

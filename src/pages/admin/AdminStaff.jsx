@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useEffect } from 'react';
 import { Plus, Edit2, Trash2, ToggleLeft, ToggleRight, X, Check } from 'lucide-react';
-import { fetchAdminStaff, createAdminStaff, updateAdminStaff, deleteAdminStaff, toggleAdminStaffAvailability } from '../../api/endpoints';
+import { fetchAdminStaff, createAdminStaff, updateAdminStaff, deleteAdminStaff, toggleAdminStaffAvailability, registerUser, makeAdmin } from '../../api/endpoints';
 import { getAvatarUrl } from '../../utils/imageUtils';
 import StarRating from '../../components/ui/StarRating';
 
@@ -30,7 +30,19 @@ function StaffForm({ value, onChange, onSave, onCancel }) {
         <label className="text-xs font-medium text-aura-muted dark:text-aura-dark-muted mb-1 block">Working Hours</label>
         <input type="text" value={value.workingHours || ''} onChange={(e) => onChange({ ...value, workingHours: e.target.value })} className="input-field" />
       </div>
-      <div className="flex gap-2">
+      
+      {!value.id && ( // Only show when creating new
+        <div className="pt-2 border-t border-aura-border dark:border-aura-dark-border mt-3">
+          <label className="text-xs font-medium text-aura-muted dark:text-aura-dark-muted mb-2 block">Create User Account (Optional)</label>
+          <div className="grid grid-cols-2 gap-2">
+            <input type="email" placeholder="Email" value={value.email || ''} onChange={(e) => onChange({...value, email: e.target.value})} className="input-field" />
+            <input type="password" placeholder="Password" value={value.password || ''} onChange={(e) => onChange({...value, password: e.target.value})} className="input-field" />
+          </div>
+          <p className="text-[10px] text-aura-muted mt-1">Provide email and password to allow this staff member to log in.</p>
+        </div>
+      )}
+
+      <div className="flex gap-2 mt-4">
         <button onClick={onSave} className="btn-primary flex-1 justify-center"><Check size={14} /> Save</button>
         <button onClick={onCancel} className="btn-secondary flex-1 justify-center"><X size={14} /> Cancel</button>
       </div>
@@ -82,6 +94,24 @@ export default function AdminStaff() {
   const handleAdd = async () => {
     try {
       const added = await createAdminStaff(newStaff);
+      
+      if (newStaff.email && newStaff.password) {
+        try {
+          const user = await registerUser({
+            name: newStaff.name,
+            email: newStaff.email,
+            password: newStaff.password,
+            phone: newStaff.phone || '0000000000'
+          });
+          // Elevate user so they can login. 
+          // Note: Backend might make them admin, which we check in auth logic.
+          if (user?.id) await makeAdmin(user.id);
+        } catch (uErr) {
+          console.error('Failed to create user account', uErr);
+          alert('Staff created, but failed to create user account. Email might already exist.');
+        }
+      }
+
       setStaff((prev) => [...prev, added]);
       setAvailability((a) => ({...a, [added.id]: added.is_active !== false}));
       setNewStaff(EMPTY);

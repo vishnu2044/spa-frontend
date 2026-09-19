@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tag, Clock, Check, Crown } from 'lucide-react';
-import { offers, membershipPlans } from '../data/offers';
+import { fetchOffers } from '../api/endpoints';
+import { membershipPlans } from '../data/offers';
 import Modal from '../components/ui/Modal';
 
 // Countdown Timer component
@@ -110,9 +111,25 @@ function MembershipModal({ plan, onClose }) {
 export default function OffersPage() {
   const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [offers, setOffers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const featuredOffer = offers.find((o) => o.hasCountdown);
-  const regularOffers = offers.filter((o) => !o.hasCountdown);
+  useEffect(() => {
+    const loadOffers = async () => {
+      try {
+        const data = await fetchOffers();
+        setOffers(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Failed to fetch offers:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadOffers();
+  }, []);
+
+  const featuredOffer = offers.find((o) => o.hasCountdown || o.has_countdown);
+  const regularOffers = offers.filter((o) => !o.hasCountdown && !o.has_countdown);
 
   return (
     <main className="pt-16 pb-24 md:pb-10 min-h-screen bg-aura-bg dark:bg-aura-dark-bg">
@@ -177,10 +194,10 @@ export default function OffersPage() {
                   {offer.description}
                 </p>
                 <div className="flex items-center justify-between">
-                  <span className="text-xl font-bold text-aura-text dark:text-aura-dark-text">{offer.discount}</span>
+                  <span className="text-xl font-bold text-aura-text dark:text-aura-dark-text">{offer.discount || offer.discount_label}</span>
                   <div className="flex gap-2">
                     <div className="px-3 py-1.5 bg-aura-surface/60 dark:bg-aura-dark-surface/60 rounded-lg">
-                      <span className="text-xs font-mono font-bold text-aura-accent">{offer.code}</span>
+                      <span className="text-xs font-mono font-bold text-aura-accent">{offer.code || offer.promo_code}</span>
                     </div>
                     <button
                       onClick={() => navigate('/booking')}

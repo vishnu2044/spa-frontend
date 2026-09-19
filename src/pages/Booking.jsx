@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Check, Clock, Star, Calendar, User } from 'lucide-react';
-import { fetchServices, fetchStaff, createBooking } from '../api/endpoints';
+import { fetchServices, fetchStaff, createBooking, fetchAvailability } from '../api/endpoints';
 import { getAvatarUrl, getServiceImageUrl } from '../utils/imageUtils';
 import { formatPrice, formatDuration, formatDate, formatTime, getAvailableSlots, getCalendarAvailability } from '../utils/helpers';
 import { saveBooking, addPoints, generateBookingId } from '../utils/storage';
@@ -226,8 +226,27 @@ function StepDate({ specialist, value, onChange }) {
 }
 
 // Step 4: Choose Time
-function StepTime({ date, specialist, value, onChange }) {
-  const slots = getAvailableSlots(date, specialist?.id || 'any');
+function StepTime({ date, specialist, value, onChange, bookedSlots = [], serviceDuration = 45 }) {
+  const allSlots = getAvailableSlots(date, specialist?.id || 'any');
+
+  const slots = allSlots.map(s => {
+    const sMinutes = parseInt(s.time.split(':')[0]) * 60 + parseInt(s.time.split(':')[1]);
+    const sEnd = sMinutes + serviceDuration;
+    
+    // Check overlap with any booked slot
+    const isBooked = bookedSlots.some(b => {
+      if (!b.time) return false;
+      const bMinutes = parseInt(b.time.split(':')[0]) * 60 + parseInt(b.time.split(':')[1]);
+      const bEnd = bMinutes + (b.duration_minutes || 45);
+      return (sMinutes < bEnd && sEnd > bMinutes); // True if overlaps
+    });
+    
+    return {
+      ...s,
+      available: s.available && !isBooked
+    };
+  });
+
   const morning = slots.filter((s) => parseInt(s.time) < 12);
   const afternoon = slots.filter((s) => parseInt(s.time) >= 12);
 
@@ -499,6 +518,7 @@ export default function BookingPage() {
   const [servicesData, setServicesData] = useState([]);
   const [serviceCategoriesData, setServiceCategoriesData] = useState([]);
   const [staffData, setStaffData] = useState([]);
+  const [bookedSlots, setBookedSlots] = useState([]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -540,6 +560,27 @@ export default function BookingPage() {
       }
     }
   }, [searchParams, servicesData]);
+
+  // Fetch booked slots when entering Step Time
+  useEffect(() => {
+    if (step === 3 && booking.date) {
+      const loadAvailability = async () => {
+        try {
+          const staffId = booking.specialist?.id !== 'any' ? booking.specialist.id : null;
+          const res = await fetchAvailability(booking.date, staffId);
+          if (res && res.booked_slots) {
+            setBookedSlots(res.booked_slots);
+          } else {
+            setBookedSlots([]);
+          }
+        } catch (err) {
+          console.error("Failed to load availability", err);
+          setBookedSlots([]);
+        }
+      };
+      loadAvailability();
+    }
+  }, [step, booking.date, booking.specialist]);
 
   const canProceed = () => {
     switch (step) {
@@ -660,7 +701,9 @@ export default function BookingPage() {
               date={booking.date}
               specialist={booking.specialist}
               value={booking.time}
-              onChange={(t) => setBooking((b) => ({ ...b, time: t }))}
+              onChange={(val) => setBooking({ ...booking, time: val })}
+              bookedSlots={bookedSlots}
+              serviceDuration={booking.service?.duration_minutes || booking.service?.duration || 45}
             />
           )}
           {step === 4 && (
